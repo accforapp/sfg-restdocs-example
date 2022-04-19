@@ -1,7 +1,6 @@
 package com.example.sfgrestdocsexample.web.model;
 
-import lombok.Builder;
-import lombok.Getter;
+import lombok.*;
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
@@ -11,8 +10,11 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
+@Setter
 @Getter
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class BeerDto {
 
   @Null

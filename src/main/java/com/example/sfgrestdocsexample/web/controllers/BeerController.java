@@ -17,8 +17,8 @@ public class BeerController {
   private final BeerMapper beerMapper;
   private final BeerRepository beerRepository;
 
-  public BeerController(BeerMapper beerMapper, BeerRepository beerRepository) {
-    this.beerMapper = beerMapper;
+  public BeerController(BeerRepository beerRepository) {
+    this.beerMapper = BeerMapper.INSTANCE;
     this.beerRepository = beerRepository;
   }
 
