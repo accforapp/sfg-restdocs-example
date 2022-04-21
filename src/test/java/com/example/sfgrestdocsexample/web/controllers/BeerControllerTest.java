@@ -5,7 +5,6 @@ import com.example.sfgrestdocsexample.repositories.BeerRepository;
 import com.example.sfgrestdocsexample.web.model.BeerDto;
 import com.example.sfgrestdocsexample.web.model.BeerStyleEnum;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jdk.jfr.ContentType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,27 +15,26 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.http.MediaType;
 import org.springframework.restdocs.RestDocumentationExtension;
+import org.springframework.restdocs.constraints.ConstraintDescriptions;
+import org.springframework.restdocs.payload.FieldDescriptor;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
-//import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document;
 import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.*;
-import static org.springframework.restdocs.payload.PayloadDocumentation.fieldWithPath;
-import static org.springframework.restdocs.payload.PayloadDocumentation.responseFields;
+import static org.springframework.restdocs.payload.PayloadDocumentation.*;
 import static org.springframework.restdocs.request.RequestDocumentation.*;
+import static org.springframework.restdocs.snippet.Attributes.key;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ExtendWith(RestDocumentationExtension.class)
-@AutoConfigureRestDocs
+@AutoConfigureRestDocs(uriScheme = "https", uriHost = "superhost.com", uriPort = 80)
 @WebMvcTest(BeerController.class)
 @ComponentScan(basePackages = "com.example.sfgrestdocsexample.web.mappers")
 class BeerControllerTest {
@@ -63,7 +61,7 @@ class BeerControllerTest {
             .param("iscold", "yes")
             .accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk())
-        .andDo(document("v1/beer",
+        .andDo(document("v1/beer-get",
             pathParameters(
                 parameterWithName("beerId").description("UUID of desired beer to get.")
             ),
@@ -90,10 +88,25 @@ class BeerControllerTest {
     BeerDto beerDto = getValidBeerDto();
     String beerDtoJson = objectMapper.writeValueAsString(beerDto);
 
+    ConstrainedFields fields = new ConstrainedFields(BeerDto.class);
+
     mockMvc.perform(post("/api/v1/beer/")
             .contentType(MediaType.APPLICATION_JSON)
             .content(beerDtoJson))
-        .andExpect(status().isCreated());
+        .andExpect(status().isCreated())
+        .andDo(document("v1/beer-new",
+            requestFields(
+                fields.withPath("id").ignored(),
+                fields.withPath("version").ignored(),
+                fields.withPath("createdDate").ignored(),
+                fields.withPath("lastModifiedDate").ignored(),
+                fields.withPath("beerName").description("Beer Name"),
+                fields.withPath("beerStyle").description("Beer Style"),
+                fields.withPath("upc").description("UPC of Beer").attributes(),
+                fields.withPath("price").description("Price"),
+                fields.withPath("quantityToBrew").ignored()
+            )
+        ));
   }
 
   @Test
@@ -116,5 +129,20 @@ class BeerControllerTest {
         .price(new BigDecimal("9.99"))
         .upc(323131L)
         .build();
+  }
+
+  private static class ConstrainedFields {
+
+    private final ConstraintDescriptions constraintDescriptions;
+
+    ConstrainedFields(Class<?> input) {
+      this.constraintDescriptions = new ConstraintDescriptions(input);
+    }
+
+    private FieldDescriptor withPath(String path) {
+      return fieldWithPath(path)
+          .attributes(key("constraints")
+          .value(StringUtils.collectionToDelimitedString(this.constraintDescriptions.descriptionsForProperty(path), ". ")));
+    }
   }
 }
